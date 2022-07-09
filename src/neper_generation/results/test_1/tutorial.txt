@@ -1,0 +1,24 @@
+#Property of Not Real Engineering 
+#Copyright 2020 Not Real Engineering - All Rights Reserved You may not use, 
+#           distribute and modify this code without the written permission 
+#           from Not Real Engineering.
+
+# Step 1 Tessellation 
+$ neper -T -n 10 -id 4 -morpho "diameq:lognormal(1,0.1),1-sphericity:lognormal(0.145,0.03)" -reg 1 -format tess,ori -o Polycrystal_basic
+$ neper -V Polycrystal_basic.tess -datacellcol id -datacelltrs 0.5 -print Polycrystal_basic_image
+
+# Create "lamnormal" and "lamwidth" file
+
+# Step 2 Tessellation
+$ neper -T -n 10::from_morpho -id 4::1 -morpho "diameq:lognormal(1,0.1),1-sphericity:lognormal(0.145,0.03)::lamellar(w=file(lamwidth),v=file(lamnormal))" -reg 1 -sel 0.004 -format tess,ori -o Polycrystal_laminated
+$ neper -V Polycrystal_laminated.tess -datacellcol id -datacelltrs 0.5 -print Polycrystal_laminated_image
+$ neper -M Polycrystal_laminated.tess -order 2 -cl 0.045 -meshqualexpr Odis -meshqualmin 1
+$ neper -V Polycrystal_laminated.tess,Polycrystal_laminated.msh -dataelsetcol id -print Polycrystal_laminated_mesh_image
+
+
+
+"gg::diameq:dirac(1),sphericity:lognormal(0.145,0.03,1-x)::lamellar(w=0.01:0.03)"
+neper -T -n from_morpho -morpho "lamellar(w=0.1:1)" -format tesr -tesrsize 32 -o output2.tesr
+neper -T -n from_morpho -morpho "lamellar(w=0.1:1)" -format tess -o output2.tess
+
+neper -T -n from_morpho -morpho "tesr:file(output2.tesr)" -domain "cube(1,1,1)" -o output3.tess
