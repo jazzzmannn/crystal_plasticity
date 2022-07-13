@@ -16,7 +16,7 @@ class Progressor:
         self.start_time = time.time()
         self.module_start_time = self.start_time
         self.index = 1
-        self.max_chars = 40
+        self.max_chars = 35
 
     # Updates and returns the time string
     def update_time(self):
