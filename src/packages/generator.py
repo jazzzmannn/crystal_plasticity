@@ -10,6 +10,7 @@ import os
 import packages.progressor as progressor
 import packages.lognormal as lognormal
 import packages.orientation as orientation
+import packages.angle as angle
 
 # Filenames
 RUN_FILE            = "run.sh"
@@ -19,17 +20,11 @@ CRYSTAL_ORI_PATH    = RESULTS_DIR + "crystal_ori"
 OUTPUT_PATH         = RESULTS_DIR + "output"
 IMAGE_PREFIX        = RESULTS_DIR + "img"
 
-# Statistics
-TWIN_THICKNESS      = { "mu": 1.45213, "sigma": 0.87586, "mean": 6.28413, "variance": 46.0933 } # microns
-PARENT_EQ_RADIUS    = { "mu": 3.01160, "sigma": 1.20437, "mean": 42.3802, "variance": 6114.57 } # microns
-PARENT_SPHERICITY   = { "mu": -0.9614, "sigma": 0.13107, "mean": 0.38573, "variance": 0.00258 } # microns
-MISORIENTATION      = 60 # degrees
-
 # The Generator Class
 class Generator:
 
     # Constructor
-    def __init__(self, volume_length, max_grains, max_twins):
+    def __init__(self, volume_length, max_grains, max_twins, misorientation, crystal_type, statistics):
         
         # For visualising the generation
         self.progressor = progressor.Progressor()
@@ -42,10 +37,15 @@ class Generator:
         for file in os.listdir(RESULTS_DIR):
             os.remove(RESULTS_DIR + file)
 
-        # For the shape of the volume
-        self.volume_length = volume_length
-        self.max_grains = max_grains
-        self.max_twins = max_twins
+        # Properties of the volume
+        self.volume_length      = volume_length
+        self.max_grains         = max_grains
+        self.max_twins          = max_twins
+        self.misorientation     = misorientation
+        self.crystal_type       = crystal_type
+        self.twin_thickness     = statistics["twin_thickness"]
+        self.parent_eq_radius   = statistics["parent_eq_radius"]
+        self.parent_sphericity  = statistics["parent_sphericity"]
 
     # For writing a file to the results directory
     def write_results(self, file_name, content):
@@ -57,8 +57,8 @@ class Generator:
     # Writes the twin widths
     def generate_twin_widths(self):
         self.progressor.start("Generating twin widths")
-        twin_lognormal = lognormal.Lognormal(TWIN_THICKNESS)
-        gap_lognormal = lognormal.Lognormal(PARENT_EQ_RADIUS)
+        twin_lognormal = lognormal.Lognormal(self.twin_thickness["mu"], self.twin_thickness["sigma"], self.twin_thickness["min"], self.twin_thickness["max"])
+        gap_lognormal = lognormal.Lognormal(self.parent_eq_radius["mu"], self.parent_eq_radius["sigma"], self.parent_eq_radius["min"], self.parent_eq_radius["max"])
         width_string = ""
         for i in range(self.max_grains):
             lamellae_widths       = 2 * self.max_twins * [None]
@@ -74,13 +74,13 @@ class Generator:
         # Initialise
         self.progressor.start("Generating crystal orientations")
         main_crystal_ori = ""
-        misorientation = orientation.deg_to_rad(MISORIENTATION)
+        misorientation = angle.deg_to_rad(self.misorientation)
 
         # Iterate through grains
         for i in range(self.max_grains):
 
             # Generate a pair of euler angles with a misorientation of 60 degs
-            euler_pair = orientation.generate_euler_pair(misorientation)
+            euler_pair = orientation.generate_euler_pair(misorientation, self.crystal_type)
             euler_pair = [" ".join([str(e) for e in euler]) for euler in euler_pair]
 
             # Create alternating string of euler angles
@@ -102,8 +102,8 @@ class Generator:
         self.progressor.start("Writing bash file")
         
         # Defines the morphology
-        diameq      = "diameq:lognormal({},{})".format(2 * PARENT_EQ_RADIUS["mean"], 2 * PARENT_EQ_RADIUS["variance"]**0.5)
-        sphericity  = "1-sphericity:lognormal({},{})".format(PARENT_SPHERICITY["mean"], round(PARENT_SPHERICITY["variance"]**(1/2), 5))
+        diameq      = "diameq:lognormal({},{})".format(2 * self.parent_eq_radius["mean"], 2 * self.parent_eq_radius["variance"]**0.5)
+        sphericity  = "1-sphericity:lognormal({},{})".format(self.parent_sphericity["mean"], round(self.parent_sphericity["variance"]**(1/2), 5))
         lamellar    = "lamellar(w=file({}),v=crysdir(1,0,0))".format(TWIN_WIDTH_PATH)
         morpho      = "-morpho \"{},{}::{}\"".format(diameq, sphericity, lamellar)
 

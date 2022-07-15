@@ -26,7 +26,7 @@ class Progressor:
     # Starts a step in the process
     def start(self, message):
         padding = " " * (self.max_chars - len(message))
-        print(" {}) {} ... {}".format(self.index, message, padding), end="")
+        print(" {}) {} ... {}".format(self.index, message, padding), end="", flush=True)
         self.module_start_time = time.time()
 
     # Ends a step in the process

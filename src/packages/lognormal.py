@@ -13,9 +13,9 @@ import random
 class Lognormal:
 
     # Constructor
-    def __init__(self, statistic):
-        self.amount = 1000
-        self.distribution = np.random.lognormal(statistic["mu"], statistic["sigma"], self.amount)
+    def __init__(self, mu, sigma, min = 0, max = 1000000, amount = 1000):
+        self.distribution = np.random.lognormal(mu, sigma, amount)
+        self.distribution = [d for d in self.distribution if d > min and d < max]
 
     # Gets a value from the lognormal distribution
     def get_val(self):
