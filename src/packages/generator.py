@@ -1,5 +1,5 @@
 """
- Title:         Generator
+ Title:         File Generator
  Description:   Generates all the files for creating a Neper tessellation and mesh
  Author:        Janzen Choi
 
@@ -26,18 +26,9 @@ class Generator:
     # Constructor
     def __init__(self, volume_length, max_grains, max_twins, misorientation, crystal_type, statistics):
         
-        # For visualising the generation
+        # Properties of the volume
         self.progressor = progressor.Progressor()
         self.progressor.start("Initialising the system")
-        self.progressor.end()
-
-        # Prepares the environment
-        if not os.path.exists(RESULTS_DIR):
-            os.mkdir(RESULTS_DIR)
-        for file in os.listdir(RESULTS_DIR):
-            os.remove(RESULTS_DIR + file)
-
-        # Properties of the volume
         self.volume_length      = volume_length
         self.max_grains         = max_grains
         self.max_twins          = max_twins
@@ -46,6 +37,15 @@ class Generator:
         self.twin_thickness     = statistics["twin_thickness"]
         self.parent_eq_radius   = statistics["parent_eq_radius"]
         self.parent_sphericity  = statistics["parent_sphericity"]
+        self.progressor.end()
+
+        # Prepares the environment
+        self.progressor.start("Resetting the results directory")
+        if not os.path.exists(RESULTS_DIR):
+            os.mkdir(RESULTS_DIR)
+        for file in os.listdir(RESULTS_DIR):
+            os.remove(RESULTS_DIR + file)
+        self.progressor.end()
 
     # For writing a file to the results directory
     def write_results(self, file_name, content):
@@ -116,13 +116,14 @@ class Generator:
 
         # Defines other options
         morphooptiini   = "-morphooptiini coo:packing,weight:radeq"
-        crystal_ori     = "-ori \"random::msfile({})\"".format(CRYSTAL_ORI_PATH)
-        tess_options    = "{} {} {} {}".format(morpho, shape, morphooptiini, crystal_ori)
+        crystal_ori     = "-ori \"random::msfile({},des=euler-bunge)\"".format(CRYSTAL_ORI_PATH)
+        output_format   = "-format tess,tesr -oridescriptor euler-bunge -tesrsize {} -tesrformat ascii".format(self.volume_length // 2)
+        tess_options    = "{} {} {} {} {}".format(morpho, shape, morphooptiini, crystal_ori, output_format)
         vis_options     = "-datacellcol ori -datacellcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
 
         # For creating the tessellation and mesh
         commands = "#!/bin/bash\n"
-        commands += "neper -T -n from_morpho::from_morpho {} -format tess,tesr -tesrsize {} -o {} &&".format(tess_options, self.volume_length // 2, OUTPUT_PATH)
+        commands += "neper -T -n from_morpho::from_morpho {} -o {} &&".format(tess_options, OUTPUT_PATH)
         commands += "neper -V {}.tess {} -print {}_1 &&".format(OUTPUT_PATH, vis_options, IMAGE_PREFIX)
         commands += "neper -V {}.tesr {} -print {}_2 &&".format(OUTPUT_PATH, vis_options, IMAGE_PREFIX)
         commands += "neper -M {}.tess &&".format(OUTPUT_PATH)

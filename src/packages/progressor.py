@@ -1,5 +1,5 @@
 """
- Title:         Progressor
+ Title:         Progress Visualiser
  Description:   For updating steps of a process
  Author:        Janzen Choi
 

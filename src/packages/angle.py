@@ -1,5 +1,5 @@
 """
- Title:         Angle
+ Title:         Angle Operations
  Description:   Dealing with angle related operations
  Author:        Janzen Choi
 
@@ -29,13 +29,13 @@ def random_quat():
     w = math.sqrt(u[0]) * math.cos(2 * math.pi * u[2])
     return [x, y, z, w]
 
-# Generates a set of (uniformly) random euler angles
+# Generates a set of (uniformly) random euler-bunge angles 
 def random_euler():
     quat = random_quat()
     euler = quat_to_euler(*quat) 
     return euler
 
-# Converts a set of euler angles into a quaternion (rads)
+# Converts a set of euler-bunge angles into a quaternion (rads)
 def euler_to_quat(roll, pitch, yaw):
     cy = math.cos(yaw * 0.5)
     sy = math.sin(yaw * 0.5)
@@ -49,7 +49,7 @@ def euler_to_quat(roll, pitch, yaw):
     w = cr * cp * cy + sr * sp * sy
     return [x, y, z, w]
 
-# Converts a quaternion into a set of euler angles (rads)
+# Converts a quaternion into a set of euler-bunge angles (rads)
 def quat_to_euler(x, y, z, w):
     roll    = math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y))
     pitch   = math.asin(max([min([2 * (w * y - z * x), 1]), -1]))

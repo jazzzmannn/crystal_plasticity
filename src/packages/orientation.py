@@ -1,6 +1,6 @@
 """
- Title:         Orientation
- Description:   For generating the orientation of grains
+ Title:         Crystallographic Orienter
+ Description:   For generating the crystallographic orientation of grains
  Author:        Janzen Choi
 
 """
@@ -13,16 +13,10 @@ from scipy.optimize import minimize
 
 # Generates a pair of euler angles based on a misorientation
 def generate_euler_pair(misorientation, type):
-    
-    # Generate random euler pair
     euler = angle.random_euler()
     pairer = Pairer(euler, misorientation, type)
     pairing_euler = pairer.get_pairing_euler()
-    
-    # Convert to positive degree
-    euler = [360 + d if d < 0 else d for d in angle.rad_to_deg(euler)]
-    pairing_euler = [360 + d if d < 0 else d for d in angle.rad_to_deg(pairing_euler)]
-    return [euler, pairing_euler]
+    return [angle.rad_to_deg(euler), angle.rad_to_deg(pairing_euler)]
 
 # The Pairer Class
 class Pairer:

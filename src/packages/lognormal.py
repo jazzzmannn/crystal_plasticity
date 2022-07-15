@@ -1,6 +1,6 @@
 """
- Title:         Randomiser
- Description:   For defining a lognormal distribution
+ Title:         Custom Lognormal Distribution
+ Description:   For defining a custom lognormal distribution
  Author:        Janzen Choi
 
 """
