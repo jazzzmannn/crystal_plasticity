@@ -117,7 +117,7 @@ class Generator:
         # Defines other options
         morphooptiini   = "-morphooptiini coo:packing,weight:radeq"
         crystal_ori     = "-ori \"random::msfile({},des=euler-bunge)\"".format(CRYSTAL_ORI_PATH)
-        output_format   = "-format tess,tesr -oridescriptor euler-bunge -tesrsize {} -tesrformat ascii".format(self.volume_length // 2)
+        output_format   = "-oridescriptor euler-bunge -format tess,tesr -tesrsize {} -tesrformat ascii".format(self.volume_length // 2)
         tess_options    = "{} {} {} {} {}".format(morpho, shape, morphooptiini, crystal_ori, output_format)
         vis_options     = "-datacellcol ori -datacellcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
 

@@ -11,7 +11,7 @@ import packages.generator as generator
 # Properties
 DIMENSIONS      = 2
 VOLUME_LENGTH   = 5000 # microns
-MAX_GRAINS      = 1500
+MAX_GRAINS      = 2000
 MAX_TWINS       = 40 # 1/2 of maximum lamellae
 MISORIENTATION  = 60 # (degrees)
 CRYSTAL_TYPE    = "cubic"

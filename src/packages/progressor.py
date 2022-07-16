@@ -8,15 +8,19 @@
 # Libraries
 import time
 
+# Constants
+DEFAULT_INDEX = 1
+DEFAULT_MAX_CHARS = 35
+
 # For visualising the progress of a process
 class Progressor:
 
     # Constructor
-    def __init__(self):
+    def __init__(self, index = DEFAULT_INDEX, max_chars = DEFAULT_MAX_CHARS):
         self.start_time = time.time()
         self.module_start_time = self.start_time
-        self.index = 1
-        self.max_chars = 35
+        self.index = index
+        self.max_chars = max_chars
 
     # Updates and returns the time string
     def update_time(self):
