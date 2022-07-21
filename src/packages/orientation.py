@@ -6,37 +6,17 @@
 """
 
 # Libraries
-import packages.angle as angle
 import packages.symmetry as symmetry
 import numpy as np, math
-from scipy.optimize import minimize
 
-# Generates a pair of euler angles based on a misorientation
-def generate_euler_pair(misorientation, type):
-    euler = angle.random_euler()
-    pairer = Pairer(euler, misorientation, type)
-    pairing_euler = pairer.get_pairing_euler()
-    return [angle.rad_to_deg(euler), angle.rad_to_deg(pairing_euler)]
-
-# The Pairer Class
-class Pairer:
-
-    # Constructor
-    def __init__(self, euler, misorientation, type):
-        self.euler = euler
-        self.misorientation = misorientation
-        self.type = type
-
-    # Determines a pairing set of euler angles from a misorientation angle (rads)
-    def get_pairing_euler(self):
-        x0 = np.array([1, 1, 1])
-        res = minimize(self.pairing_euler_obj, x0, method="nelder-mead", options={"disp": False})
-        return list(res.x)
-
-    # Objective function for determining a pairing set of euler angles (rads)
-    def pairing_euler_obj(self, euler):
-        misorientation = get_misorientation_angle(self.euler, euler, self.type)
-        return (self.misorientation - misorientation) ** 2
+# Determines the coincidence site lattice value
+def get_csl(euler_1, euler_2):
+    om_1 = get_orientation_matrix(euler_1)
+    om_2 = get_orientation_matrix(euler_2)
+    om_2_i = get_inverted(om_2)
+    product = get_matrix_product(om_1, om_2_i)
+    uvw = [product[2][1] - product[1][2], product[0][2] - product[2][0], product[1][0] - product[0][1]]
+    return uvw
 
 # Determines the misorientation of two sets of euler angles (rads)
 def get_misorientation_angle(euler_1, euler_2, type):

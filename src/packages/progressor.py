@@ -6,11 +6,12 @@
 """
 
 # Libraries
-import time
+import time, os
 
 # Constants
-DEFAULT_INDEX = 1
-DEFAULT_MAX_CHARS = 35
+DEFAULT_PATH        = "/"
+DEFAULT_INDEX       = 1
+DEFAULT_MAX_CHARS   = 40
 
 # For visualising the progress of a process
 class Progressor:
@@ -21,20 +22,28 @@ class Progressor:
         self.module_start_time = self.start_time
         self.index = index
         self.max_chars = max_chars
+        self.messages = ""
 
     # Updates and returns the time string
     def update_time(self):
         time_string = str(round((time.time() - self.module_start_time) * 1000)) + "ms"
         return time_string
     
+    # Prints and stores message
+    def update(self, message):
+        os.system('cls' if os.name == 'nt' else 'clear')
+        self.messages += message
+        print("\n  Progress Report:\n")
+        print(self.messages)
+
     # Starts a step in the process
     def start(self, message):
         padding = " " * (self.max_chars - len(message))
-        print(" {}) {} ... {}".format(self.index, message, padding), end="", flush=True)
+        self.update("   {}) {} ... {}".format(self.index, message, padding))
         self.module_start_time = time.time()
 
     # Ends a step in the process
     def end(self):
         time_string = str(round((time.time() - self.module_start_time) * 1000)) + "ms"
-        print("Done! ({})".format(time_string))
+        self.update("Done! ({})\n".format(time_string))
         self.index += 1

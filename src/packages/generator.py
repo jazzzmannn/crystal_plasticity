@@ -1,139 +1,199 @@
 """
- Title:         File Generator
- Description:   Generates all the files for creating a Neper tessellation and mesh
+ Title:         Generator
+ Description:   Generates the RVE using Neper
  Author:        Janzen Choi
 
 """
 
 # Libraries
-import os
+import os, subprocess, random
 import packages.progressor as progressor
 import packages.lognormal as lognormal
-import packages.orientation as orientation
+import packages.pairer as pairer
 import packages.angle as angle
 
-# Filenames
-RUN_FILE            = "run.sh"
+# Output files
 RESULTS_DIR         = "results/"
-TWIN_WIDTH_PATH     = RESULTS_DIR + "twin_width"
-CRYSTAL_ORI_PATH    = RESULTS_DIR + "crystal_ori"
 OUTPUT_PATH         = RESULTS_DIR + "output"
 IMAGE_PREFIX        = RESULTS_DIR + "img"
+
+# Auxiliary files
+AUXILIARY_DIR       = RESULTS_DIR + "auxiliary/"
+PARENT_DIAM_PATH    = AUXILIARY_DIR + "parent"
+TWIN_WIDTH_PATH     = AUXILIARY_DIR + "twin_width"
+CRYSTAL_ORI_PATH    = AUXILIARY_DIR + "crystal_ori"
+
+# Other constants
+MAX_EXPECTED_TWINS  = 5
 
 # The Generator Class
 class Generator:
 
     # Constructor
-    def __init__(self, volume_length, max_grains, max_twins, misorientation, crystal_type, statistics):
-        
-        # Properties of the volume
+    def __init__(self, dimensions, volume_length):
         self.progressor = progressor.Progressor()
         self.progressor.start("Initialising the system")
-        self.volume_length      = volume_length
-        self.max_grains         = max_grains
-        self.max_twins          = max_twins
-        self.misorientation     = misorientation
-        self.crystal_type       = crystal_type
-        self.twin_thickness     = statistics["twin_thickness"]
-        self.parent_eq_radius   = statistics["parent_eq_radius"]
-        self.parent_sphericity  = statistics["parent_sphericity"]
-        self.progressor.end()
+        
+        # Initialise
+        self.volume_length = volume_length
+        dim         = "-dim {}".format(dimensions)
+        domain_3d   = "-domain \"cube({},{},{})\"".format(self.volume_length, self.volume_length, self.volume_length)
+        domain_2d   = "-domain \"square({},{})\"".format(self.volume_length, self.volume_length)
+        domain      = domain_3d if dimensions == 3 else domain_2d
+        self.shape  = "{} {}".format(dim, domain)
 
         # Prepares the environment
-        self.progressor.start("Resetting the results directory")
-        if not os.path.exists(RESULTS_DIR):
-            os.mkdir(RESULTS_DIR)
-        for file in os.listdir(RESULTS_DIR):
-            os.remove(RESULTS_DIR + file)
+        create_empty_directory(RESULTS_DIR)
+        create_empty_directory(AUXILIARY_DIR)
+        self.auxiliary_files = []
         self.progressor.end()
-
-    # For writing a file to the results directory
-    def write_results(self, file_name, content):
-        if not os.path.exists(RESULTS_DIR):
-            os.mkdir(RESULTS_DIR)
+    
+    # For writing a file to the helper directory
+    def write_auxiliary(self, file_name, content):
+        if not os.path.exists(AUXILIARY_DIR):
+            os.mkdir(AUXILIARY_DIR)
         with open(file_name, "w+") as file:
             file.write(content)
+        self.auxiliary_files.append(file_name)
 
-    # Writes the twin widths
-    def generate_twin_widths(self):
-        self.progressor.start("Generating twin widths")
-        twin_lognormal = lognormal.Lognormal(self.twin_thickness["mu"], self.twin_thickness["sigma"], self.twin_thickness["min"], self.twin_thickness["max"])
-        gap_lognormal = lognormal.Lognormal(self.parent_eq_radius["mu"], self.parent_eq_radius["sigma"], self.parent_eq_radius["min"], self.parent_eq_radius["max"])
-        width_string = ""
-        for i in range(self.max_grains):
-            lamellae_widths       = 2 * self.max_twins * [None]
-            lamellae_widths[::2]  = [gap_lognormal.get_val() for _ in range(self.max_twins)]
-            lamellae_widths[1::2] = [twin_lognormal.get_val() for _ in range(self.max_twins)]
+    # Finishes generating the RVE
+    def end_generator(self):
+        self.progressor.start("Cleaning up the system")
+        for file in self.auxiliary_files:
+            os.remove(file)
+        os.rmdir(AUXILIARY_DIR)
+        self.progressor.end()
+
+    # Generates the tessellation of the parent grains
+    def tessellate_parents(self, parent_eq_radius_list, parent_sphericity):
+        self.progressor.start("Tessellating the parent grains")
+        
+        # Define the morphology
+        diameq      = "diameq:" + "+".join(["lognormal({},{})".format(2 * stat["mean"], 2 * stat["variance"]**0.5) for stat in parent_eq_radius_list])
+        sphericity  = "1-sphericity:lognormal({},{})".format(parent_sphericity["mean"], parent_sphericity["variance"]**0.5)
+        morpho      = "-morpho \"{},{}\"".format(diameq, sphericity)
+        optiini     = "-morphooptiini coo:packing,weight:radeq"
+
+        # Assemble and run the command
+        command = "neper -T -n from_morpho {} {} {} -statcell diameq,sphericity -o {}".format(morpho, optiini, self.shape, PARENT_DIAM_PATH)
+        subprocess.run([command], shell = True, check = True)
+        self.auxiliary_files.append(PARENT_DIAM_PATH + ".stcell")
+        self.auxiliary_files.append(PARENT_DIAM_PATH + ".tess")
+        self.progressor.end()
+
+    # Visualises the parent grains
+    def visualise_parents(self):
+        self.progressor.start("Visualising the parent grains")
+        options = "-datacellcol ori -datacellcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
+        command = "neper -V {}.tess {} -print {}_1".format(PARENT_DIAM_PATH, options, IMAGE_PREFIX)
+        subprocess.run([command], shell = True, check = True)
+        self.progressor.end()
+
+    # Generates the twins
+    def generate_twins(self, twin_thickness):
+        self.progressor.start("Generating the twin widths")
+        
+        # Read parent diametres and sphericities
+        file = open(PARENT_DIAM_PATH + ".stcell", "r")
+        parent_diametre_list, parent_sphericity_list = [], []
+        for line in file.readlines():
+            values = line.replace("\n", "").split(" ")
+            parent_diametre_list.append(float(values[0]))
+            parent_sphericity_list.append(float(values[1]))
+        self.num_grains = len(parent_diametre_list)
+        file.close()
+
+        # Generate twin width distributions
+        twin_lognormal = lognormal.Lognormal(twin_thickness["mu"], twin_thickness["sigma"], twin_thickness["min"], twin_thickness["max"])
+        
+        # Generate twin widths and gaps
+        width_string = "{} {}\n".format(1, self.volume_length)
+        for i in range(self.num_grains):
+            num_expected_twins = random.randrange(MAX_EXPECTED_TWINS + 1)
+            if num_expected_twins == 0:
+                width_string += "{} {}\n".format(i + 1, self.volume_length)
+                continue
+            factor = parent_diametre_list[i] / parent_sphericity_list[i]
+            lamellae_widths       = 2 * num_expected_twins * [None]
+            lamellae_widths[::2]  = twin_lognormal.get_norm_vals(num_expected_twins, factor)
+            lamellae_widths[1::2] = twin_lognormal.get_vals(num_expected_twins)
             width_string += "{} {}\n".format(i + 1, ":".join([str(lw) for lw in lamellae_widths]))
-        self.write_results(TWIN_WIDTH_PATH, width_string)
+
+        # Write generated data
+        self.write_auxiliary(TWIN_WIDTH_PATH, width_string)
         self.progressor.end()
 
     # Writes the crystallographic orientations
-    def generate_crystal_ori(self):
+    def generate_crystal_orientations(self, misorientation, crystal_type):
+        self.progressor.start("Generating the crystal orientations")
 
         # Initialise
-        self.progressor.start("Generating crystal orientations")
         main_crystal_ori = ""
-        misorientation = angle.deg_to_rad(self.misorientation)
+        misorientation = angle.deg_to_rad(misorientation)
 
         # Iterate through grains
-        for i in range(self.max_grains):
+        for i in range(self.num_grains):
 
             # Generate a pair of euler angles with a misorientation of 60 degs
-            euler_pair = orientation.generate_euler_pair(misorientation, self.crystal_type)
+            euler_pair = pairer.generate_euler_pair(misorientation, crystal_type)
+            euler_pair = angle.rad_to_deg(euler_pair)
             euler_pair = [" ".join([str(e) for e in euler]) for euler in euler_pair]
 
-            # Create alternating string of euler angles
-            crystal_ori       = 2 * self.max_twins * [None]
-            crystal_ori[::2]  = [euler_pair[0] for _ in range(self.max_twins)]
-            crystal_ori[1::2] = [euler_pair[1] for _ in range(self.max_twins)]
-            
-            # Write euler angle pairs for parent and twin grains
-            crystal_ori_path    = "{}_{}".format(CRYSTAL_ORI_PATH, i)
-            self.write_results(crystal_ori_path, "\n".join(crystal_ori))
+            # Write alternating string of euler angles
+            crystal_ori = (euler_pair[0] + "\n" + euler_pair[1] + "\n") * MAX_EXPECTED_TWINS
+            crystal_ori_path = "{}_{}".format(CRYSTAL_ORI_PATH, i)
+            self.write_auxiliary(crystal_ori_path, crystal_ori)
             main_crystal_ori += "{} file({},des=euler-bunge)\n".format(i + 1, crystal_ori_path)
         
         # Write index of euler angle files
-        self.write_results(CRYSTAL_ORI_PATH, main_crystal_ori)
+        self.write_auxiliary(CRYSTAL_ORI_PATH, main_crystal_ori)
         self.progressor.end()
 
-    # Writes the bash file (dim = 2 or 3)
-    def generate_bash(self, dim = 3):
-        self.progressor.start("Writing bash file")
-        
-        # Defines the morphology
-        diameq      = "diameq:lognormal({},{})".format(2 * self.parent_eq_radius["mean"], 2 * self.parent_eq_radius["variance"]**0.5)
-        sphericity  = "1-sphericity:lognormal({},{})".format(self.parent_sphericity["mean"], round(self.parent_sphericity["variance"]**(1/2), 5))
-        lamellar    = "lamellar(w=file({}),v=crysdir(1,0,0))".format(TWIN_WIDTH_PATH)
-        morpho      = "-morpho \"{},{}::{}\"".format(diameq, sphericity, lamellar)
+    # Generates the tessellation with parents and twins
+    def tessellate_volume(self):
+        self.progressor.start("Tessellate the multi-scale volume")
 
-        # Defines shape of volume
-        dimensions  = "-dim {}".format(dim)
-        domain_3d   = "-domain \"cube({},{},{})\"".format(self.volume_length, self.volume_length, self.volume_length)
-        domain_2d   = "-domain \"square({},{})\"".format(self.volume_length, self.volume_length)
-        domain      = domain_3d if dim == 3 else domain_2d
-        shape       = "{} {}".format(dimensions, domain)
-
-        # Defines other options
-        morphooptiini   = "-morphooptiini coo:packing,weight:radeq"
+        # Define the morphology and crystal orientation
+        morpho          = "-morpho \"voronoi::lamellar(w=file({}),v=crysdir(1,0,0))\"".format(TWIN_WIDTH_PATH)
+        optiini         = "-morphooptiini \"file({})\"".format(PARENT_DIAM_PATH + ".tess")
         crystal_ori     = "-ori \"random::msfile({},des=euler-bunge)\"".format(CRYSTAL_ORI_PATH)
         output_format   = "-oridescriptor euler-bunge -format tess,tesr -tesrsize {} -tesrformat ascii".format(self.volume_length // 2)
-        tess_options    = "{} {} {} {} {}".format(morpho, shape, morphooptiini, crystal_ori, output_format)
-        vis_options     = "-datacellcol ori -datacellcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
 
-        # For creating the tessellation and mesh
-        commands = "#!/bin/bash\n"
-        commands += "neper -T -n from_morpho::from_morpho {} -o {} &&".format(tess_options, OUTPUT_PATH)
-        commands += "neper -V {}.tess {} -print {}_1 &&".format(OUTPUT_PATH, vis_options, IMAGE_PREFIX)
-        commands += "neper -V {}.tesr {} -print {}_2 &&".format(OUTPUT_PATH, vis_options, IMAGE_PREFIX)
-        commands += "neper -M {}.tess &&".format(OUTPUT_PATH)
-        commands += "neper -V {}.tess,{}.msh {} -print {}_3\n".format(OUTPUT_PATH, OUTPUT_PATH, vis_options, IMAGE_PREFIX)
-
-        # For removing the other files
-        helper_files = [RUN_FILE, TWIN_WIDTH_PATH, CRYSTAL_ORI_PATH]
-        helper_files += ["{}_{}".format(CRYSTAL_ORI_PATH, i) for i in range(self.max_grains)]
-        commands += "\n".join(["rm {}".format(file) for file in helper_files])
-
-        # Write commands to a bash file
-        self.write_results(RUN_FILE, commands)
+        # Assemble and run command
+        options = "{} {} {} {} {}".format(morpho, optiini, crystal_ori, output_format, self.shape)
+        command = "neper -T -n {}::from_morpho {} -o {}".format(self.num_grains, options, OUTPUT_PATH)
+        subprocess.run([command], shell = True, check = True)
         self.progressor.end()
+    
+    # Visualises the tessellation
+    def visualise_volume(self):
+        self.progressor.start("Visualising multi-scale tessellation")
+        options = "-datacellcol ori -datacellcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
+        command = "neper -V {}.tess {} -print {}_2".format(OUTPUT_PATH, options, IMAGE_PREFIX)
+        subprocess.run([command], shell = True)
+        self.progressor.end()
+
+    # Mesh the volume
+    def mesh_volume(self):
+        self.progressor.start("Mesh the multi-scale tessellation")
+        command = "neper -M {}.tess".format(OUTPUT_PATH)
+        subprocess.run([command], shell = True, check = True)
+        self.progressor.end()
+    
+    # Visualise the mesh
+    def visualise_mesh(self):
+        self.progressor.start("Visualising multi-scale mesh")
+        options = "-dataelsetcol ori -dataelsetcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
+        command = "neper -V {}.tess,{}.msh {} -print {}_3".format(OUTPUT_PATH, OUTPUT_PATH, options, IMAGE_PREFIX)
+        subprocess.run([command], shell = True)
+        self.progressor.end()
+
+# Creates an empty directory
+def create_empty_directory(directory_path):
+    if not os.path.exists(directory_path):
+        os.mkdir(directory_path)
+    for file in os.listdir(directory_path):
+        try:
+            os.remove(directory_path + file)
+        except:
+            pass

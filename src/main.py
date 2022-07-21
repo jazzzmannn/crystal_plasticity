@@ -10,20 +10,27 @@ import packages.generator as generator
 
 # Properties
 DIMENSIONS      = 2
-VOLUME_LENGTH   = 5000 # microns
-MAX_GRAINS      = 2000
-MAX_TWINS       = 40 # 1/2 of maximum lamellae
+VOLUME_LENGTH   = 500 # microns
 MISORIENTATION  = 60 # (degrees)
 CRYSTAL_TYPE    = "cubic"
-STATISTICS      = {
-    "twin_thickness":       { "mu": 1.45213, "sigma": 0.87586, "mean": 6.28413, "variance": 46.0933, "min": 0.6042, "max": 59.8839 },
-    "parent_eq_radius":     { "mu": 3.01160, "sigma": 1.20437, "mean": 42.3802, "variance": 6114.57, "min": 2.0349, "max": 221.314 },
-    "parent_sphericity":    { "mu": -0.9614, "sigma": 0.13107, "mean": 0.38573, "variance": 0.00258 },
-}
+
+# Statistics
+TWIN_THICKNESS      = { "mu": 1.43090, "sigma": 0.89090, "mean": 6.21960, "variance": 46.8620, "min": 0.42990, "max": 69.3133 }
+PARENT_EQ_RADIUS    = { "mu": 2.950077, "sigma": 1.256951, "mean": 42.099649, "variance": 6831.803092, "min": 1.635426, "max": 257.058914 }
+PARENT_EQ_RADIUS_1  = { "mu": 1.908533, "sigma": 0.843008, "mean": 9.620190, "variance": 95.818480, "min": 1.635426, "max": 24.744041 }
+PARENT_EQ_RADIUS_2  = { "mu": 3.985832, "sigma": 0.527962, "mean": 61.880403, "variance": 1230.961962, "min": 24.870175, "max": 215.109386 }
+# PARENT_SPHERICITY   = { "mu": -0.956164, "sigma": 0.131702, "mean": 0.387712, "variance": 0.002630, "min": 0.189074, "max": 0.491382 }
+PARENT_SPHERICITY   = { "mu": -0.956164, "sigma": 0.131702, "mean": 0.145, "variance": 0.002630, "min": 0.189074, "max": 0.491382 }
 
 # Main function
 if __name__ == "__main__":
-    gen = generator.Generator(VOLUME_LENGTH, MAX_GRAINS, MAX_TWINS, MISORIENTATION, CRYSTAL_TYPE, STATISTICS)
-    gen.generate_twin_widths()
-    gen.generate_crystal_ori()
-    gen.generate_bash(DIMENSIONS)
+    gen = generator.Generator(DIMENSIONS, VOLUME_LENGTH)
+    gen.tessellate_parents([PARENT_EQ_RADIUS], PARENT_SPHERICITY)
+    gen.visualise_parents()
+    gen.generate_twins(TWIN_THICKNESS)
+    gen.generate_crystal_orientations(MISORIENTATION, CRYSTAL_TYPE)
+    gen.tessellate_volume()
+    gen.visualise_volume()
+    gen.mesh_volume()
+    gen.visualise_mesh()
+    # gen.end_generator()
