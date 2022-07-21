@@ -7,7 +7,6 @@ The following repository is maintained by Janzen Choi as part of his PhD candida
 The following instructions are for developing an RVE, which uses lamellae to represent annealling twin structures.
 
 1) Install Neper ([LINK](https://github.com/neperfepx/neper)).
-2) Go to the directory where the code is located ([LINK](https://github.com/jazzzmannn/crystal_plasticity/tree/main/src/neper_gen)).
+2) Go to the directory where the code is located ([LINK](https://github.com/jazzzmannn/crystal_plasticity/tree/main/src)).
 3) Open the script, `main.py`, and change the parameters based on the desired properties of the RVE.
-4) Open the terminal and run the script via `python3 main.py`. This should create a bash file, `run.sh`.
-5) Run the bash file via `./run.sh`.
+4) Open the terminal and run the script via `python3 main.py`.
