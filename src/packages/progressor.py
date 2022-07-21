@@ -7,21 +7,25 @@
 
 # Libraries
 import time, os
+import packages.commander as commander
 
 # Constants
 DEFAULT_PATH        = "/"
-DEFAULT_INDEX       = 1
+DEFAULT_START_INDEX = 1
 DEFAULT_MAX_CHARS   = 40
+DEFAULT_MAX_INDEX   = 99
 
 # For visualising the progress of a process
 class Progressor:
 
     # Constructor
-    def __init__(self, index = DEFAULT_INDEX, max_chars = DEFAULT_MAX_CHARS):
+    def __init__(self, index = DEFAULT_START_INDEX, max_index = DEFAULT_MAX_INDEX, max_chars = DEFAULT_MAX_CHARS):
         self.start_time = time.time()
+        self.start_time_string = time.strftime("%H:%M:%S", time.localtime(self.start_time))
         self.module_start_time = self.start_time
         self.index = index
         self.max_chars = max_chars
+        self.max_index = max_index
         self.messages = ""
 
     # Updates and returns the time string
@@ -33,13 +37,15 @@ class Progressor:
     def update(self, message):
         os.system('cls' if os.name == 'nt' else 'clear')
         self.messages += message
-        print("\n  Progress Report:\n")
+        commander.bold_print("\n  Progress Report (started at {}):\n".format(self.start_time_string))
         print(self.messages)
 
     # Starts a step in the process
     def start(self, message):
-        padding = " " * (self.max_chars - len(message))
-        self.update("   {}) {} ... {}".format(self.index, message, padding))
+        index_padding = " " * (len(str(self.max_index)) - len(str(self.index)))
+        completion_padding = " " * (self.max_chars - len(message))
+        self.update("  {}{}) {} ... {}".format(index_padding, self.index, message, completion_padding))
+        print("")
         self.module_start_time = time.time()
 
     # Ends a step in the process
@@ -47,3 +53,8 @@ class Progressor:
         time_string = str(round((time.time() - self.module_start_time) * 1000)) + "ms"
         self.update("Done! ({})\n".format(time_string))
         self.index += 1
+    
+    # Ends the process
+    def end_all(self):
+        time_diff = round(time.time() - self.start_time, 2)
+        commander.bold_print("  Finished in {} seconds!\n".format(time_diff))
