@@ -4,7 +4,7 @@ The following repository is maintained by Janzen Choi as part of his PhD candida
 
 ### Generating an RVE in Neper
 
-The following instructions are for developing an RVE in Neper, which uses lamellae to represent annealling twin structures.
+The following instructions are for developing an RVE in Neper, which uses lamellae to represent annealling twin structures. A special thanks to the developers of Neper for answering so many of my questions on the discussion board [LINK](https://github.com/neperfepx/neper/discussions).
 
 1) Install Neper ([LINK](https://github.com/neperfepx/neper)).
 2) Clone the repository by running `git clone https://github.com/janzennnnn/crystal_plasticity` in the terminal.
