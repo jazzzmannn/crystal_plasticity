@@ -6,7 +6,7 @@
 """
 
 # Libraries
-import os, random
+import os
 import packages.progressor as progressor
 import packages.lognormal as lognormal
 import packages.pairer as pairer
@@ -70,11 +70,11 @@ class Generator:
             file.write(content)
 
     # Generates the tessellation of the parent grains
-    def tessellate_parents(self, parent_eq_radius_list, parent_sphericity):
+    def tessellate_parents(self, parent_eq_radius, parent_sphericity):
         self.progressor.start("Tessellating the parent grains")
         
         # Define the morphology
-        diameq      = "diameq:" + "+".join(["lognormal({},{})".format(2 * stat["mean"], 2 * stat["variance"]**0.5) for stat in parent_eq_radius_list])
+        diameq      = "diameq:lognormal({},{})".format(2 * parent_eq_radius["mean"], 2 * parent_eq_radius["variance"]**0.5)
         sphericity  = "1-sphericity:lognormal({},{})".format(parent_sphericity["mean"], parent_sphericity["variance"]**0.5)
         morpho      = "-morpho \"{},{}\"".format(diameq, sphericity)
 
@@ -102,6 +102,7 @@ class Generator:
             values = line.replace("\n", "").split(" ")
             parent_diametre_list.append(float(values[0]))
             parent_sphericity_list.append(float(values[1]))
+        max_parent_diametre = max(parent_diametre_list)
         self.num_grains = len(parent_diametre_list)
         file.close()
 
@@ -111,7 +112,7 @@ class Generator:
         # Generate twin widths and gaps
         width_string = "{} {}\n".format(1, self.volume_length)
         for i in range(1, self.num_grains):
-            num_expected_twins = random.randrange(MAX_EXPECTED_TWINS + 1)
+            num_expected_twins = round(MAX_EXPECTED_TWINS * parent_diametre_list[i] / max_parent_diametre)
             if num_expected_twins == 0:
                 width_string += "{} {}\n".format(i + 1, self.volume_length)
                 continue
