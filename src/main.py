@@ -10,7 +10,7 @@ import packages.generator as generator
 
 # Properties
 DIMENSIONS      = 2
-VOLUME_LENGTH   = 3000 # microns
+VOLUME_LENGTH   = 200 # microns
 MISORIENTATION  = 60 # (degrees)
 CRYSTAL_TYPE    = "cubic"
 

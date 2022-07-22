@@ -51,9 +51,9 @@ def main():
             "x": i % volume_length,
             "y": i // volume_length % volume_length,
             "z": i // volume_length // volume_length,
-            "euler_1": voxel_ori[0],
-            "euler_2": voxel_ori[1],
-            "euler_3": voxel_ori[2],
+            "euler_1": round(voxel_ori[0], 3),
+            "euler_2": round(voxel_ori[1], 3),
+            "euler_3": round(voxel_ori[2], 3),
         }
         voxel_data_list.append(voxel_data)
     prog.end()

@@ -13,19 +13,21 @@ import packages.pairer as pairer
 import packages.angle as angle
 import packages.commander as commander
 
-# Output files
-RESULTS_DIR         = "results/"
-OUTPUT_PATH         = RESULTS_DIR + "output"
-IMAGE_PREFIX        = RESULTS_DIR + "img"
+# Directories
+RESULTS_DIR         = "results"
+AUXILIARY_DIR       = "auxiliary"
+OUTPUT_DIR          = "output"
 
-# Auxiliary files
-AUXILIARY_DIR       = RESULTS_DIR + "auxiliary/"
-PARENT_DIAM_PATH    = AUXILIARY_DIR + "parent"
-TWIN_WIDTH_PATH     = AUXILIARY_DIR + "twin_width"
-CRYSTAL_ORI_PATH    = AUXILIARY_DIR + "crystal_ori"
+# Files
+PARENT_DIAM_FILE    = "parent"
+TWIN_WIDTH_FILE     = "twin_width"
+CRYSTAL_ORI_FILE    = "crystal_ori"
+OUTPUT_FILE         = "output"
+IMAGE_FILE          = "img"
 
 # Other constants
 MAX_EXPECTED_TWINS  = 10
+MAX_RESULTS         = 999
 
 # The Generator Class
 class Generator:
@@ -34,38 +36,38 @@ class Generator:
     def __init__(self, dimensions, volume_length):
         self.progressor = progressor.Progressor()
         self.progressor.start("Initialising the system")
-        
+
         # Initialise
         self.volume_length = volume_length
+        self.dimensions = dimensions
         dim         = "-dim {}".format(dimensions)
         domain_3d   = "-domain \"cube({},{},{})\"".format(self.volume_length, self.volume_length, self.volume_length)
         domain_2d   = "-domain \"square({},{})\"".format(self.volume_length, self.volume_length)
         domain      = domain_3d if dimensions == 3 else domain_2d
         self.shape  = "{} {}".format(dim, domain)
 
+        # Determine directory and file names
+        dirs = [dir for dir in os.listdir(RESULTS_DIR)]
+        self.output_dir         = "{}/{}_{}".format(RESULTS_DIR, OUTPUT_DIR, str(len(dirs) + 1).zfill(len(str(MAX_RESULTS))))
+        self.output_path        = "{}/{}".format(self.output_dir, OUTPUT_FILE)
+        self.image_path         = "{}/{}".format(self.output_dir, IMAGE_FILE)
+        self.auxiliary_dir      = "{}/{}".format(self.output_dir, AUXILIARY_DIR)
+        self.parent_diam_path   = "{}/{}".format(self.auxiliary_dir, PARENT_DIAM_FILE)
+        self.twin_width_path    = "{}/{}".format(self.auxiliary_dir, TWIN_WIDTH_FILE)
+        self.crystal_ori_path   = "{}/{}".format(self.auxiliary_dir, CRYSTAL_ORI_FILE)
+
         # Prepares the environment
-        create_empty_directory(RESULTS_DIR)
-        create_empty_directory(AUXILIARY_DIR)
+        os.mkdir(self.output_dir)
+        os.mkdir(self.auxiliary_dir)
         remove_mesh_files()
-        self.auxiliary_files = []
         self.progressor.end()
     
     # For writing a file to the helper directory
     def write_auxiliary(self, file_name, content):
-        if not os.path.exists(AUXILIARY_DIR):
-            os.mkdir(AUXILIARY_DIR)
+        if not os.path.exists(self.auxiliary_dir):
+            os.mkdir(self.auxiliary_dir)
         with open(file_name, "w+") as file:
             file.write(content)
-        self.auxiliary_files.append(file_name)
-
-    # Finishes generating the RVE
-    def end_generator(self):
-        self.progressor.start("Cleaning up the system")
-        # for file in self.auxiliary_files:
-        #     os.remove(file)
-        # os.rmdir(AUXILIARY_DIR)
-        self.progressor.end()
-        self.progressor.end_all()
 
     # Generates the tessellation of the parent grains
     def tessellate_parents(self, parent_eq_radius_list, parent_sphericity):
@@ -75,20 +77,17 @@ class Generator:
         diameq      = "diameq:" + "+".join(["lognormal({},{})".format(2 * stat["mean"], 2 * stat["variance"]**0.5) for stat in parent_eq_radius_list])
         sphericity  = "1-sphericity:lognormal({},{})".format(parent_sphericity["mean"], parent_sphericity["variance"]**0.5)
         morpho      = "-morpho \"{},{}\"".format(diameq, sphericity)
-        optiini     = "-morphooptiini coo:packing,weight:radeq"
 
         # Assemble and run the command
-        command = "neper -T -n from_morpho {} {} -statcell diameq,sphericity -o {}".format(morpho, self.shape, PARENT_DIAM_PATH)
+        command = "neper -T -n from_morpho {} {} -statcell diameq,sphericity -o {}".format(morpho, self.shape, self.parent_diam_path)
         commander.run(command)
-        self.auxiliary_files.append(PARENT_DIAM_PATH + ".stcell")
-        self.auxiliary_files.append(PARENT_DIAM_PATH + ".tess")
         self.progressor.end()
 
     # Visualises the parent grains
     def visualise_parents(self):
         self.progressor.start("Visualising the parent grains")
         options = "-datacellcol ori -datacellcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
-        command = "neper -V {}.tess {} -print {}_1".format(PARENT_DIAM_PATH, options, IMAGE_PREFIX)
+        command = "neper -V {}.tess {} -print {}_1".format(self.parent_diam_path, options, self.image_path)
         commander.run(command)
         self.progressor.end()
 
@@ -97,7 +96,7 @@ class Generator:
         self.progressor.start("Generating the twin widths")
         
         # Read parent diametres and sphericities
-        file = open(PARENT_DIAM_PATH + ".stcell", "r")
+        file = open(self.parent_diam_path + ".stcell", "r")
         parent_diametre_list, parent_sphericity_list = [], []
         for line in file.readlines():
             values = line.replace("\n", "").split(" ")
@@ -123,7 +122,7 @@ class Generator:
             width_string += "{} {}\n".format(i + 1, ":".join([str(lw) for lw in lamellae_widths]))
 
         # Write generated data
-        self.write_auxiliary(TWIN_WIDTH_PATH, width_string)
+        self.write_auxiliary(self.twin_width_path, width_string)
         self.progressor.end()
 
     # Writes the crystallographic orientations
@@ -144,12 +143,12 @@ class Generator:
 
             # Write alternating string of euler angles
             crystal_ori = (euler_pair[0] + "\n" + euler_pair[1] + "\n") * MAX_EXPECTED_TWINS
-            crystal_ori_path = "{}_{}".format(CRYSTAL_ORI_PATH, i)
+            crystal_ori_path = "{}_{}".format(self.crystal_ori_path, i)
             self.write_auxiliary(crystal_ori_path, crystal_ori)
             main_crystal_ori += "{} file({},des=euler-bunge)\n".format(i + 1, crystal_ori_path)
         
         # Write index of euler angle files
-        self.write_auxiliary(CRYSTAL_ORI_PATH, main_crystal_ori)
+        self.write_auxiliary(self.crystal_ori_path, main_crystal_ori)
         self.progressor.end()
 
     # Generates the tessellation with parents and twins
@@ -157,14 +156,14 @@ class Generator:
         self.progressor.start("Tessellating the multi-scale volume")
 
         # Define the morphology and crystal orientation
-        morpho          = "-morpho \"voronoi::lamellar(w=file({}),v=crysdir(1,0,0))\"".format(TWIN_WIDTH_PATH)
-        optiini         = "-morphooptiini \"file({})\"".format(PARENT_DIAM_PATH + ".tess")
-        crystal_ori     = "-ori \"random::msfile({},des=euler-bunge)\"".format(CRYSTAL_ORI_PATH)
+        morpho          = "-morpho \"voronoi::lamellar(w=file({}),v=crysdir(1,0,0))\"".format(self.twin_width_path)
+        optiini         = "-morphooptiini \"file({})\"".format(self.parent_diam_path + ".tess")
+        crystal_ori     = "-ori \"random::msfile({},des=euler-bunge)\"".format(self.crystal_ori_path)
         output_format   = "-oridescriptor euler-bunge -format tess,tesr -tesrsize {} -tesrformat ascii".format(self.volume_length // 2)
 
         # Assemble and run command
         options = "{} {} {} {} {}".format(morpho, optiini, crystal_ori, output_format, self.shape)
-        command = "neper -T -n {}::from_morpho {} -o {}".format(self.num_grains, options, OUTPUT_PATH)
+        command = "neper -T -n {}::from_morpho {} -o {}".format(self.num_grains, options, self.output_path)
         commander.run(command)
         self.progressor.end()
     
@@ -172,14 +171,14 @@ class Generator:
     def visualise_volume(self):
         self.progressor.start("Visualising multi-scale tessellation")
         options = "-datacellcol ori -datacellcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
-        command = "neper -V {}.tess {} -print {}_2".format(OUTPUT_PATH, options, IMAGE_PREFIX)
+        command = "neper -V {}.tess {} -print {}_2".format(self.output_path, options, self.image_path)
         commander.run(command)
         self.progressor.end()
 
     # Mesh the volume
     def mesh_volume(self):
         self.progressor.start("Meshing the multi-scale tessellation")
-        command = "neper -M {}.tess".format(OUTPUT_PATH)
+        command = "neper -M {}.tess".format(self.output_path)
         commander.run(command)
         self.progressor.end()
     
@@ -187,9 +186,17 @@ class Generator:
     def visualise_mesh(self):
         self.progressor.start("Visualising multi-scale mesh")
         options = "-dataelsetcol ori -dataelsetcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
-        command = "neper -V {}.tess,{}.msh {} -print {}_3".format(OUTPUT_PATH, OUTPUT_PATH, options, IMAGE_PREFIX)
+        command = "neper -V {}.tess,{}.msh {} -print {}_3".format(self.output_path, self.output_path, options, self.image_path)
         commander.run(command)
         self.progressor.end()
+    
+    # Finishes generating the RVE
+    def end_generator(self):
+        self.progressor.start("Cleaning up the system")
+        remove_mesh_files()
+        os.rename(self.output_dir, "{} ({},{})".format(self.output_dir, self.volume_length, self.dimensions))
+        self.progressor.end()
+        self.progressor.end_all()
 
 # Removes .geo and .msh files from current directory
 def remove_mesh_files():
@@ -197,13 +204,3 @@ def remove_mesh_files():
     for file in files:
         if file.endswith(".geo") or file.endswith(".msh"):
             os.remove(file)
-
-# Creates an empty directory
-def create_empty_directory(directory_path):
-    if not os.path.exists(directory_path):
-        os.mkdir(directory_path)
-    for file in os.listdir(directory_path):
-        try:
-            os.remove(directory_path + file)
-        except:
-            pass
