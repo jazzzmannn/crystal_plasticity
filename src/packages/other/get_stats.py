@@ -1,5 +1,5 @@
 """
- Title:         Data Exporter after
+ Title:         Data Exporter
  Description:   Exports statistics from a raster tessellation file
  Author:        Janzen Choi
 
@@ -74,6 +74,7 @@ def main():
         writer.writerow(row)
     file.close()
     prog.end()
+    prog.end_all()
 
 # Searches for a keyword in a text file and extracts the contained data
 def extract_data(keyword, filename):

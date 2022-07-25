@@ -69,17 +69,26 @@ class Generator:
         with open(file_name, "w+") as file:
             file.write(content)
 
+    # Defines a custom domain for the tessellation
+    def define_custom_3d_domain(self):
+        self.progressor.start("Defining custom domain")
+        domain = "-domain \"cube(950,200,500)\""
+        transform = "-transform \"cut(cylinder(500,0,200,0,1,0,200))\""
+        self.shape = "{} {}".format(domain, transform)
+        self.progressor.end()
+
     # Generates the tessellation of the parent grains
     def tessellate_parents(self, parent_eq_radius, parent_sphericity):
         self.progressor.start("Tessellating the parent grains")
         
         # Define the morphology
-        diameq      = "diameq:lognormal({},{})".format(2 * parent_eq_radius["mean"], 2 * parent_eq_radius["variance"]**0.5)
-        sphericity  = "1-sphericity:lognormal({},{})".format(parent_sphericity["mean"], parent_sphericity["variance"]**0.5)
+        diameq      = "diameq:lognormal({},{})".format(2 * parent_eq_radius["mean"], round(2 * parent_eq_radius["variance"]**0.5, 5))
+        sphericity  = "1-sphericity:lognormal({},{})".format(parent_sphericity["mean"], round(parent_sphericity["variance"]**0.5, 5))
         morpho      = "-morpho \"{},{}\"".format(diameq, sphericity)
+        reg         = "-reg 1"
 
         # Assemble and run the command
-        command = "neper -T -n from_morpho {} {} -statcell diameq,sphericity -o {}".format(morpho, self.shape, self.parent_diam_path)
+        command = "neper -T -n from_morpho {} {} {} -statcell diameq,sphericity -o {}".format(morpho, self.shape, reg, self.parent_diam_path)
         commander.run(command)
         self.progressor.end()
 
