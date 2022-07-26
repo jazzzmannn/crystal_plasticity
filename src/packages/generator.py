@@ -1,6 +1,6 @@
 """
  Title:         Generator
- Description:   Generates the RVE using Neper
+ Description:   For generating the RVE using Neper
  Author:        Janzen Choi
 
 """

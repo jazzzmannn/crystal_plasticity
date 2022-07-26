@@ -1,6 +1,6 @@
 """
  Title:         Progress Visualiser
- Description:   For updating steps of a process
+ Description:   For visualising the steps of a process
  Author:        Janzen Choi
 
 """
