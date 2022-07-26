@@ -1,6 +1,6 @@
 """
- Title:         Angle Operations
- Description:   Dealing with angle related operations
+ Title:         Angle related operations
+ Description:   Dealing with angle related operations (in the Euler-bunge notation where relevant)
  Author:        Janzen Choi
 
 """
@@ -20,6 +20,12 @@ def deg_to_rad(degrees):
         return [deg_to_rad(d) for d in degrees]
     return degrees * math.pi / 180
 
+# Generates a set of (uniformly) random euler-bunge angles 
+def random_euler():
+    quat = random_quat()
+    euler = quat_to_euler(*quat) 
+    return euler
+
 # Generates a (uniformly) random quaternion
 def random_quat():
     u = [random.uniform(0, 1) for _ in range(3)]
@@ -29,20 +35,14 @@ def random_quat():
     w = math.sqrt(u[0]) * math.cos(2 * math.pi * u[2])
     return [x, y, z, w]
 
-# Generates a set of (uniformly) random euler-bunge angles 
-def random_euler():
-    quat = random_quat()
-    euler = quat_to_euler(*quat) 
-    return euler
-
 # Converts a set of euler-bunge angles into a quaternion (rads)
-def euler_to_quat(roll, pitch, yaw):
-    cy = math.cos(yaw * 0.5)
-    sy = math.sin(yaw * 0.5)
-    cp = math.cos(pitch * 0.5)
-    sp = math.sin(pitch * 0.5)
-    cr = math.cos(roll * 0.5)
-    sr = math.sin(roll * 0.5)
+def euler_to_quat(phi_1, Phi, phi_2):
+    cy = math.cos(phi_2 * 0.5)
+    sy = math.sin(phi_2 * 0.5)
+    cp = math.cos(Phi * 0.5)
+    sp = math.sin(Phi * 0.5)
+    cr = math.cos(phi_1 * 0.5)
+    sr = math.sin(phi_1 * 0.5)
     x = sr * cp * cy - cr * sp * sy
     y = cr * sp * cy + sr * cp * sy
     z = cr * cp * sy - sr * sp * cy
@@ -51,7 +51,8 @@ def euler_to_quat(roll, pitch, yaw):
 
 # Converts a quaternion into a set of euler-bunge angles (rads)
 def quat_to_euler(x, y, z, w):
-    roll    = math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y))
-    pitch   = math.asin(max([min([2 * (w * y - z * x), 1]), -1]))
-    yaw     = math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
-    return [roll, pitch, yaw]
+    phi_1 = math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y))
+    Phi   = math.asin(max([min([2 * (w * y - z * x), 1]), -1]))
+    phi_2 = math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+    return [phi_1, Phi, phi_2]
+

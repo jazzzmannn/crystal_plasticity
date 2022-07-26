@@ -2,7 +2,6 @@
  Title:         Symmetry Matrices
  Description:   For returning symmetry matrices
  Author:        Janzen Choi
-
 """
 
 # Returns symmetry matrices
