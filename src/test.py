@@ -128,8 +128,8 @@ def test_lognormal():
     max_val = 10
     max_norm = 100
     for _ in range(num_trials):
-        mu = random.uniform(0.1, 1) * max_val
-        sigma = random.uniform(0.1, 1) * max_val
+        mu = random.uniform(0.1, 1) * max_val // 10
+        sigma = random.uniform(0.1, 1) * max_val // 10
         dist = lognormal.Lognormal(mu, sigma, max = max_val)
         out_of_range = sum([0 if val >= 0 and val <= max_val else 1 for val in dist.get_vals(num_vals)])
         if out_of_range > 0:
