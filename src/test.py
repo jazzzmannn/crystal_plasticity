@@ -61,7 +61,7 @@ class Tester:
         result_text = "Passed" if result else "Failed"
         result_colour = "l_green" if result else "l_red"
         printer.print(result_text, [result_colour, "bold"], newline = False)
-        printer.print(" ({}ms)".format(round((time.time() - time_start) * 1000)))
+        printer.print(" ({}ms)".format(round((time.time() - time_start) * 1000)), ["l_cyan"])
 
     # Prints a summary of all the tests
     def finish(self):

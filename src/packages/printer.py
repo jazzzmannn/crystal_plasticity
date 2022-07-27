@@ -45,3 +45,9 @@ def print(text, options = [], newline = True):
     pretext = "".join(formats)
     newline = "" if newline else "-n"
     subprocess.run(["echo {} \"{}{}{}\"".format(newline, pretext, text, PRINT_RESET)], shell = True)
+
+# Gets the text with formatting
+def get_text(text, options = []):
+    formats = [OPTIONS[option] for option in options]
+    pretext = "".join(formats)
+    return pretext + text + PRINT_RESET

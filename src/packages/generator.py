@@ -50,7 +50,8 @@ class Generator:
 
         # Determine directory and file names
         dirs = [dir for dir in os.listdir(RESULTS_DIR)]
-        self.output_dir         = "{}/{}_{}".format(RESULTS_DIR, OUTPUT_DIR, str(len(dirs) + 1).zfill(len(str(MAX_RESULTS))))
+        self.output_file        = "{}_{}".format(OUTPUT_DIR, str(len(dirs) + 1).zfill(len(str(MAX_RESULTS))))
+        self.output_dir         = "{}/{}".format(RESULTS_DIR, self.output_file)
         self.output_path        = "{}/{}".format(self.output_dir, OUTPUT_FILE)
         self.image_path         = "{}/{}".format(self.output_dir, IMAGE_FILE)
         self.auxiliary_dir      = "{}/{}".format(self.output_dir, AUXILIARY_DIR)
@@ -208,7 +209,7 @@ class Generator:
         remove_mesh_files()
         os.rename(self.output_dir, "{} ({}d,{})".format(self.output_dir, self.dimensions, self.shape_length))
         self.progressor.end()
-        self.progressor.end_all()
+        self.progressor.end_all(self.output_file)
 
 # Removes .geo and .msh files from current directory
 def remove_mesh_files():

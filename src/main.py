@@ -10,7 +10,7 @@ import packages.generator as generator
 
 # Properties
 DIMENSIONS      = 2
-SHAPE_LENGTH    = 500 # microns
+SHAPE_LENGTH    = 200 # microns
 CSL_SIGMA       = "3"
 CRYSTAL_TYPE    = "cubic"
 

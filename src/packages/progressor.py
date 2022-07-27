@@ -52,10 +52,11 @@ class Progressor:
     # Ends a step in the process
     def end(self):
         time_string = str(round((time.time() - self.module_start_time) * 1000)) + "ms"
-        self.update("Done! ({})\n".format(time_string))
+        self.update(printer.get_text("Done!", ["bold", "l_green"]))
+        self.update(printer.get_text(" ({})\n".format(time_string), ["l_cyan"]))
         self.index += 1
     
     # Ends the process
-    def end_all(self):
+    def end_all(self, message):
         time_diff = round(time.time() - self.start_time, 2)
-        printer.print("{}Finished in {} seconds!\n".format(self.header_padding, time_diff), ["bold", "orange"])
+        printer.print("{}Finished in {} seconds ({})\n".format(self.header_padding, time_diff, message), ["bold", "orange"])
