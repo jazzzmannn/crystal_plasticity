@@ -7,12 +7,12 @@
 
 # Libraries
 import os
+import subprocess
 import packages.progressor as progressor
 import packages.lognormal as lognormal
 import packages.orientation.csl as csl
 import packages.orientation.misorienter as misorienter
 import packages.orientation.angle as angle
-import packages.commander as commander
 
 # Directories
 RESULTS_DIR         = "results"
@@ -84,7 +84,7 @@ class Generator:
 
         # Assemble and run the command
         command = "neper -T -n from_morpho {} {} {} -statcell diameq,sphericity -o {}".format(morpho, self.shape, reg, self.parent_diam_path)
-        commander.run(command)
+        run(command)
         self.progressor.end()
 
     # Visualises the parent grains
@@ -92,7 +92,7 @@ class Generator:
         self.progressor.start("Visualising the parent grains")
         options = "-datacellcol ori -datacellcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
         command = "neper -V {}.tess {} -print {}_1".format(self.parent_diam_path, options, self.image_path)
-        commander.run(command)
+        run(command)
         self.progressor.end()
 
     # Generates the twins
@@ -176,7 +176,7 @@ class Generator:
         # Assemble and run command
         options = "{} {} {} {} {}".format(morpho, self.shape, optiini, crystal_ori, output_format)
         command = "neper -T -n {}::from_morpho {} -o {}".format(self.num_grains, options, self.output_path)
-        commander.run(command)
+        run(command)
         self.progressor.end()
     
     # Visualises the tessellation
@@ -184,14 +184,14 @@ class Generator:
         self.progressor.start("Visualising multi-scale tessellation")
         options = "-datacellcol ori -datacellcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
         command = "neper -V {}.tess {} -print {}_2".format(self.output_path, options, self.image_path)
-        commander.run(command)
+        run(command)
         self.progressor.end()
 
     # Mesh the volume
     def mesh_volume(self):
         self.progressor.start("Meshing the multi-scale tessellation")
         command = "neper -M {}.tess".format(self.output_path)
-        commander.run(command)
+        run(command)
         self.progressor.end()
     
     # Visualise the mesh
@@ -199,7 +199,7 @@ class Generator:
         self.progressor.start("Visualising multi-scale mesh")
         options = "-dataelsetcol ori -dataelsetcolscheme 'ipf(y)' -cameraangle 14.5 -imagesize 800:800"
         command = "neper -V {}.tess,{}.msh {} -print {}_3".format(self.output_path, self.output_path, options, self.image_path)
-        commander.run(command)
+        run(command)
         self.progressor.end()
     
     # Finishes generating the RVE
@@ -216,3 +216,7 @@ def remove_mesh_files():
     for file in files:
         if file.endswith(".geo") or file.endswith(".msh"):
             os.remove(file)
+
+# Runs a command using a single thread
+def run(command):
+    subprocess.run(["OMP_NUM_THREADS=1 " + command], shell = True, check = True)

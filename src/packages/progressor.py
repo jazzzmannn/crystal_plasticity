@@ -7,7 +7,7 @@
 
 # Libraries
 import time, os
-import packages.commander as commander
+import packages.printer as printer
 
 # Constants
 DEFAULT_PATH        = "/"
@@ -27,6 +27,7 @@ class Progressor:
         self.max_chars = max_chars
         self.max_index = max_index
         self.messages = ""
+        self.header_padding = " " * (len(str(self.max_index)))
 
     # Updates and returns the time string
     def update_time(self):
@@ -37,15 +38,15 @@ class Progressor:
     def update(self, message):
         os.system('cls' if os.name == 'nt' else 'clear')
         self.messages += message
-        commander.bold_print("\n  Progress Report (started at {}):\n".format(self.start_time_string))
-        print(self.messages)
+        printer.print("\n{}Progress Report (started at {}):\n".format(self.header_padding, self.start_time_string), ["bold", "orange"])
+        printer.print(self.messages)
 
     # Starts a step in the process
     def start(self, message):
         index_padding = " " * (len(str(self.max_index)) - len(str(self.index)))
-        completion_padding = " " * (self.max_chars - len(message))
-        self.update("  {}{}) {} ... {}".format(index_padding, self.index, message, completion_padding))
-        print("")
+        completion_padding = "." * (self.max_chars - len(message))
+        self.update("  {}{}) {} {} ".format(index_padding, self.index, message, completion_padding))
+        printer.print("")
         self.module_start_time = time.time()
 
     # Ends a step in the process
@@ -57,4 +58,4 @@ class Progressor:
     # Ends the process
     def end_all(self):
         time_diff = round(time.time() - self.start_time, 2)
-        commander.bold_print("  Finished in {} seconds!\n".format(time_diff))
+        printer.print("{}Finished in {} seconds!\n".format(self.header_padding, time_diff), ["bold", "orange"])
