@@ -10,7 +10,9 @@ The following instructions are for developing an RVE in Neper, which uses lamell
 2) Clone the repository by running `git clone https://github.com/janzennnnn/crystal_plasticity` in the terminal.
 3) Go to the directory where the code is located by running `cd crystal_plasticity/src`.
 5) Open the script, `main.py`, and change the parameters based on the desired properties of the RVE. These parameters include the grain and twin statistics, the CSL value, the crystal type, the dimensions of the tessellation / mesh, as well as the length of the plane / volume.
-6) Open the terminal and run the script via `python3 main.py`. The script will create an `output` directory inside the `results` directory, which will contain all the generated tessellations, meshes, visualisations, and auxiliary files. Throughput, the script will continuously display the progress of the process in the terminal, and will display when the process finishes.
+6) Open the terminal and run the script via `python3 main.py`.
+7) The script will create an `output` directory inside the `results` directory, which will contain all the generated tessellations, meshes, and visualisations. The `output` directory will also contain an `auxiliary` directory filled with helper files - this directory can be deleted to save space.
+8) Throughput, the script will continuously display the progress of the process in the terminal. When the script finishes, it will be indicated in the terminal.
 
 To test the algorithmic code in the program, run the test file.
 
