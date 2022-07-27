@@ -1,6 +1,6 @@
 """
- Title:         Tester
- Description:   Custom code for conducting tests
+ Title:         Main test file
+ Description:   Custom code for conducting tests on algorithmic code
  Author:        Janzen Choi
 
 """
