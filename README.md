@@ -11,12 +11,7 @@ The following instructions are for developing an RVE in Neper, which uses lamell
 3) Go to the directory where the code is located by running `cd crystal_plasticity/src`.
 5) Open the script, `main.py`, and change the parameters based on the desired properties of the RVE. These parameters include the grain and twin statistics, the CSL value, the crystal type, the dimensions of the tessellation / mesh, as well as the length of the plane / volume.
 6) Open the terminal and run the script via `python3 main.py`.
-7) The script will create an `output` directory inside the `results` directory, which will contain all the generated tessellations, meshes, and visualisations. The `output` directory will also contain an `auxiliary` directory filled with helper files - this directory can be deleted after the program finishes to save space.
-8) Throughput, the script will continuously display the progress of the process in the terminal. When the script finishes, it will be indicated in the terminal.
 
-Note that multiple instances of the program can be run with no significant impact on the process time.
+In following these instructions, the script will create an `output` directory inside the `results` directory, which will contain all the generated tessellations, meshes, and visualisations. The `output` directory will also contain an `auxiliary` directory filled with helper files - this directory can be deleted after the program finishes to save space. Throughput, the script will continuously display the progress of the process in the terminal. When the script finishes, it will be indicated in the terminal. Note that multiple instances of the program can be run with no significant impact on the process time.
 
-To test the algorithmic code in the program, run the test file.
-
-1) Go to the `crystal_plasticity/src` directory.
-2) Run the test file via `python3 test.py`.
+Additionally, to test the main algorithmic code in the program, the user can run the test file. This simply involves going to the `crystal_plasticity/src` directory and running  the test file via `python3 test.py`.
