@@ -14,6 +14,8 @@ The following instructions are for developing an RVE in Neper, which uses lamell
 7) The script will create an `output` directory inside the `results` directory, which will contain all the generated tessellations, meshes, and visualisations. The `output` directory will also contain an `auxiliary` directory filled with helper files - this directory can be deleted after the program finishes to save space.
 8) Throughput, the script will continuously display the progress of the process in the terminal. When the script finishes, it will be indicated in the terminal.
 
+Note that multiple instances of the program can be run with no significant impact on the process time.
+
 To test the algorithmic code in the program, run the test file.
 
 1) Go to the `crystal_plasticity/src` directory.
