@@ -6,28 +6,32 @@
 """
 
 # Libraries
+import packages.progressor as progressor
 import packages.generator as generator
 
 # Properties
-DIMENSIONS      = 2
-SHAPE_LENGTH    = 200 # microns
+DIMENSIONS      = 3
+SHAPE_LENGTH    = 500 # microns
 CSL_SIGMA       = "3"
-CRYSTAL_TYPE    = "cubic"
 
 # Statistics
-TWIN_THICKNESS      = { "mu": 1.43090, "sigma": 0.89090, "mean": 6.21960, "variance": 46.8620, "min": 0.42990, "max": 69.3133 }
-PARENT_EQ_RADIUS    = { "mu": 2.95008, "sigma": 1.25695, "mean": 42.0996, "variance": 6831.80, "min": 1.63543, "max": 257.059 }
-PARENT_SPHERICITY   = { "mu": -3.5689, "sigma": 1.17001, "mean": 0.05589, "variance": 0.00915, "min": 0.00373, "max": 0.57521 }
+PARENT_EQ_RADIUS    = { "mu": 2.94032, "sigma": 0.99847, "mean": 31.1491, "variance": 1659.11, "min": 2.60941, "max": 302.370 }
+PARENT_SPHERICITY   = { "mu": -1.6229, "sigma": 0.40402, "mean": 0.21410, "variance": 0.00813, "min": 0.02316, "max": 0.57725 } # 1-sphericity
+TWIN_THICKNESS      = { "mu": 1.46831, "sigma": 0.79859, "mean": 5.97259, "variance": 31.8271, "min": 0.63383, "max": 86.4995 }
 
 # Main function
 if __name__ == "__main__":
-    gen = generator.Generator(DIMENSIONS, SHAPE_LENGTH)
-    gen.tessellate_parents(PARENT_EQ_RADIUS, PARENT_SPHERICITY)
-    gen.visualise_parents()
-    gen.generate_twins(TWIN_THICKNESS)
-    gen.generate_crystal_orientations(CSL_SIGMA, CRYSTAL_TYPE)
-    gen.tessellate_volume()
-    gen.visualise_volume()
-    gen.mesh_volume()
-    gen.visualise_mesh()
-    gen.end_generator()
+    prog = progressor.Progressor()
+    gen = generator.Generator(DIMENSIONS, SHAPE_LENGTH, CSL_SIGMA, PARENT_EQ_RADIUS, PARENT_SPHERICITY, TWIN_THICKNESS)
+    prog.queue(gen.tessellate_parents,          message = "Tessellating the parent grains")
+    prog.queue(gen.visualise_parents,           message = "Visualising parent grains")
+    prog.queue(gen.extract_parent_properties,   message = "Extracting parent grain properties")
+    prog.queue(gen.generate_twins,              message = "Generating twins structures")
+    prog.queue(gen.generate_orientations,       message = "Generating crystal orientations")
+    prog.queue(gen.export_grain_statistics,     message = "Exporting the statistics")
+    prog.queue(gen.tessellate_volume,           message = "Tessellating multi-scale volume")
+    prog.queue(gen.visualise_volume,            message = "Visualising multi-scale tessellation")
+    # prog.queue(gen.mesh_volume,                 message = "Meshing multi-scale tessellation")
+    # prog.queue(gen.visualise_mesh,              message = "Visualising multi-scale mesh")
+    prog.queue(gen.remove_auxiliary_files,      message = "Removing auxiliary files")
+    prog.run(gen.output_dir_name)

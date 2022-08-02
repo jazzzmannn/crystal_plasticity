@@ -10,53 +10,63 @@ import time, os
 import packages.printer as printer
 
 # Constants
-DEFAULT_PATH        = "/"
-DEFAULT_START_INDEX = 1
-DEFAULT_MAX_CHARS   = 40
-DEFAULT_MAX_INDEX   = 99
+START_INDEX     = 1
+MIN_PADDING     = 5
+PADDING_CHAR    = "."
 
 # For visualising the progress of a process
 class Progressor:
 
     # Constructor
-    def __init__(self, index = DEFAULT_START_INDEX, max_index = DEFAULT_MAX_INDEX, max_chars = DEFAULT_MAX_CHARS):
-        self.start_time = time.time()
-        self.start_time_string = time.strftime("%H:%M:%S", time.localtime(self.start_time))
-        self.module_start_time = self.start_time
-        self.index = index
-        self.max_chars = max_chars
-        self.max_index = max_index
-        self.messages = ""
-        self.header_padding = " " * (len(str(self.max_index)))
+    def __init__(self):
+        self.function_list = []
+        self.printed_text = ""
 
-    # Updates and returns the time string
-    def update_time(self):
-        time_string = str(round((time.time() - self.module_start_time) * 1000)) + "ms"
-        return time_string
+    # Queues up a (non-returning) function
+    def queue(self, function, arguments = [], message = ""):
+        self.function_list.append({
+            "function": function,
+            "arguments": arguments,
+            "message": message
+        })
+
+    # Runs all the queued up functions
+    def run(self, message = ""):
+
+        # Determine formatting
+        max_index_padding_length = len(str(len(self.function_list))) + 1
+        max_message_length = max([len(function["message"]) for function in self.function_list])
+        self.header_padding = " " * max_index_padding_length
+        self.start_time = time.time()
+        self.start_time_string = time.strftime("%y/%m/%d, %H:%M:%S", time.localtime(self.start_time))
+        
+        # Iterate through functions
+        for i in range(len(self.function_list)):
+
+            # Print before running
+            function = self.function_list[i]
+            index_padding = " " * (max_index_padding_length - len(str(i + 1)))
+            message_padding = PADDING_CHAR * (max_message_length - len(function["message"]) + MIN_PADDING)
+            self.update("  {}{}) {} {} ".format(index_padding, i + 1, function["message"], message_padding))
+            printer.print("")
+
+            # Run the function
+            module_start_time = time.time()
+            function["function"](*function["arguments"])
+
+            # Print after running
+            time_string = str(round((time.time() - module_start_time) * 1000)) + "ms"
+            self.update(printer.get_text("Done!", ["bold", "l_green"]))
+            self.update(printer.get_text(" ({})\n".format(time_string), ["l_cyan"]))
+
+        # Finish running everything
+        message = "({})".format(message) if message != "" else ""
+        time_diff = round(time.time() - self.start_time, 2)
+        printer.print("{}Finished in {} seconds ({})\n".format(self.header_padding, time_diff, message), ["bold", "orange"])
     
     # Prints and stores message
     def update(self, message):
         os.system('cls' if os.name == 'nt' else 'clear')
-        self.messages += message
-        printer.print("\n{}Progress Report (started at {}):\n".format(self.header_padding, self.start_time_string), ["bold", "orange"])
-        printer.print(self.messages)
-
-    # Starts a step in the process
-    def start(self, message):
-        index_padding = " " * (len(str(self.max_index)) - len(str(self.index)))
-        completion_padding = "." * (self.max_chars - len(message))
-        self.update("  {}{}) {} {} ".format(index_padding, self.index, message, completion_padding))
-        printer.print("")
-        self.module_start_time = time.time()
-
-    # Ends a step in the process
-    def end(self):
-        time_string = str(round((time.time() - self.module_start_time) * 1000)) + "ms"
-        self.update(printer.get_text("Done!", ["bold", "l_green"]))
-        self.update(printer.get_text(" ({})\n".format(time_string), ["l_cyan"]))
-        self.index += 1
-    
-    # Ends the process
-    def end_all(self, message):
-        time_diff = round(time.time() - self.start_time, 2)
-        printer.print("{}Finished in {} seconds ({})\n".format(self.header_padding, time_diff, message), ["bold", "orange"])
+        self.printed_text += message
+        printer.print("\n{}Progress Report ({}):\n".format(self.header_padding, self.start_time_string), ["bold", "orange"])
+        printer.print(self.printed_text)
