@@ -6,6 +6,7 @@
 """
 
 # Libraries
+import paramnormal
 import numpy as np
 import random
 
@@ -35,3 +36,15 @@ class Lognormal:
         values = self.get_vals(size)
         factor = norm_value / sum(values)
         return [value * factor for value in values]
+
+# Fits a set of data to a lognormal distribution and returns the statistics
+def fit_lognormal(data):
+    params = paramnormal.lognormal.fit(data)
+    return {
+        "mu": params[0],
+        "sigma": params[1],
+        "mean": np.average(data),
+        "stdev": np.std(data),
+        "max": max(data),
+        "min": min(data),
+    }

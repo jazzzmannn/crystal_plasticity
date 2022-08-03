@@ -7,9 +7,9 @@
 
 # Libraries
 import numpy as np, math
+from packages.helper import *
 import packages.orientation.angle as angle
 import packages.orientation.orienter as orienter
-import packages.orientation.matrix as matrix
 import packages.orientation.symmetry as symmetry
 from scipy.optimize import minimize
 
@@ -30,9 +30,9 @@ def get_misorientation_angles(euler_1, euler_2, type):
     om_2 = orienter.euler_to_matrix(euler_2)
     angle_list = []
     for sym in symmetry.get_symmetry_matrices(type):
-        matrix_1 = matrix.get_matrix_product(sym, om_1)
-        matrix_2 = matrix.get_inverted(matrix_1)
-        matrix_3 = matrix.get_matrix_product(matrix_2, om_2)
+        matrix_1 = get_matrix_product(sym, om_1)
+        matrix_2 = get_inverted(matrix_1)
+        matrix_3 = get_matrix_product(matrix_2, om_2)
         a_angle = (matrix_3[0][0] + matrix_3[1][1] + matrix_3[2][2] - 1) / 2
         a_angle = max(a_angle, -1)
         angle = math.acos(a_angle)

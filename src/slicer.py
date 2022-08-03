@@ -1,107 +1,180 @@
 """
  Title:         Slicer
- Description:   Slices a 3D raster tessellation
+ Description:   Slices a 3D raster tessellation into 2D maps
  Author:        Janzen Choi
 
 """
 
 # Libraries
-import subprocess, csv, os
+import os, math
+import packages.lognormal as lognormal
 import packages.progressor as progressor
+from packages.helper import *
 
 # Constants
-RESOLUTION  = 1
-NUM_SLICES  = 10 # per axis
-INPUT_DIR   = "./results/output_220802_140411_2d2000/"
-OUTPUT_DIR  = INPUT_DIR + "output/"
-INPUT_TESR  = INPUT_DIR + "parent"
-OUTPUT_TESR = OUTPUT_DIR + "2d"
-OUTPUT_IMG  = OUTPUT_DIR + "2d"
-OUTPUT_CSV  = OUTPUT_DIR + "2d"
+RESOLUTION = 1
+NUM_SLICES = 50
+TARGET_DIR = "./results/output_220802_173009_3d500/"
 
 # Main function
 def main():
     prog = progressor.Progressor()
-    slicer = Slicer()
-    prog.queue(slicer.set_up_slicer,        message = "Setting up the slicing environment")
-    prog.queue(slicer.get_voxel_list,       message = "Reading RVE from raster tessellation")
-    prog.queue(slicer.slice_voxel_list,     message = "Slicing RVE into 2D sheets of grains")
-    prog.queue(slicer.slice_to_tesr,        message = "Converting slices into 2D raster tessellations")
-    prog.queue(slicer.visualise_slices,     message = "Visualise 2D raster tessellations")
-    prog.run()
+    slicer = Slicer(TARGET_DIR)
+    prog.queue(slicer.read_pos_data,            message = "Reading positional data of voxels")
+    prog.queue(slicer.slice_volume,             message = "Slicing RVE into 2D sheets of grains")
+    prog.queue(slicer.reassign_grain_ids,       message = "Reassigning the ids of all the grains")
+    # prog.queue(slicer.slice_to_tesr,            message = "Converting slices into 2D raster tessellations")
+    # prog.queue(slicer.visualise_slices,         message = "Visualise 2D raster tessellations")
+    prog.queue(slicer.order_voxels_in_grains,   message = "Ordering voxels based on grain ids")
+    prog.queue(slicer.remove_boundary_grains,   message = "Removing grains on boundaries")
+    prog.queue(slicer.export_equivalent_radii,  message = "Exporting the equivalent radii")
+    prog.commence()
 
 # The Slicer Class
 class Slicer:
 
-    # Sets up the environment
-    def set_up_slicer(self):
-        if os.path.exists(OUTPUT_DIR):
-            output_files = os.listdir(OUTPUT_DIR)
-            for file in output_files:
-                os.remove(OUTPUT_DIR + file)
-        else:
-            os.mkdir(OUTPUT_DIR)
+    # Constructor
+    def __init__(self, target_dir):
+        
+        # Define directories
+        self.input_dir  = target_dir
+        self.output_dir = self.input_dir + "sliced/"
+        
+        # Define file paths
+        self.input_tesr  = self.input_dir + "parent"
+        self.output_csv  = self.output_dir + "stats"
+        self.output_tesr = self.output_dir + "slice"
+        self.output_img  = self.output_dir + "img"
+        
+        # Create a directory for output
+        safe_mkdir(self.output_dir)
+        output_files = os.listdir(self.output_dir)
+        for file in output_files:
+            os.remove(self.output_dir + file)
 
     # Returns a list of voxels
-    def get_voxel_list(self):
+    def read_pos_data(self):
 
         # Get volume shape information
-        vol_data = extract_data("general", INPUT_TESR + ".tesr")
+        vol_data = extract_data("general", self.input_tesr + ".tesr")
         self.volume_length = int(vol_data[2])
 
         # Get positions and derive coordinates
-        pos_data = extract_data("data", INPUT_TESR + ".tesr")
-        pos_data = [int(p) for p in pos_data[2:]]
-        
-        # Prepare data for each voxel
-        self.voxel_list = []
-        for i in range(len(pos_data)):
-            self.voxel_list.append({
+        self.pos_data = extract_data("data", self.input_tesr + ".tesr")
+        self.pos_data = [int(p) for p in self.pos_data[2:]]
+
+    # Order the voxel positions into slices
+    def slice_volume(self):
+
+        # Positions for the slices
+        slice_gap = self.volume_length // NUM_SLICES
+        slice_x_list = [i * slice_gap for i in range(NUM_SLICES)] 
+
+        # Iterate through each voxel's positional data
+        self.slice_list = [[] for _ in range(NUM_SLICES)]
+        for i in range(len(self.pos_data)):
+
+            # Ignore non slices
+            x = i % self.volume_length
+            if not x in slice_x_list:
+                continue
+
+            # Add voxel to slice list
+            slice_id = slice_x_list.index(x)
+            self.slice_list[slice_id].append({
                 "voxel_id": i,
-                "grain_id": pos_data[i],
-                "x": i % self.volume_length,
+                "slice_id": slice_id,
+                "grain_id": self.pos_data[i],
+                "x": x,
                 "y": i // self.volume_length % self.volume_length,
                 "z": i // self.volume_length // self.volume_length,
             })
 
-    # Takes a slice from the voxel list
-    def slice_voxel_list(self):
-        self.slice_list = []
-        for axis in ["x", "y", "z"]:
-            for value in range(0, self.volume_length, NUM_SLICES):
-                slice = [voxel for voxel in self.voxel_list if voxel[axis] == value]
-                self.slice_list.append(slice)
-                break
-            break
+        # Release positional data from memory
+        del self.pos_data
     
+    # Reassigns the grain ids of the voxels
+    def reassign_grain_ids(self):
+        for slice in self.slice_list:
+            grain_id_list = []
+            for voxel in slice:
+                try:
+                    grain_index = grain_id_list.index(voxel["grain_id"])
+                    voxel["grain_id"] = grain_index + 1
+                except:
+                    old_grain_id = voxel["grain_id"]
+                    grain_id_list.append(old_grain_id)
+                    voxel["grain_id"] = len(grain_id_list)
+
     # Converts the slices into raster tessellation files
     def slice_to_tesr(self):
         for i in range(len(self.slice_list)):
 
             # Convert slice to list of ids
-            id_list = [voxel["grain_id"] for voxel in self.slice_list[i]]
-            num_grains = max([int(id) for id in id_list])
-            id_list = [str(id) for id in id_list]
+            id_list = [str(voxel["grain_id"]) for voxel in self.slice_list[i]]
+            id_str = " ".join(id_list)
+            num_grains = len(set(id_list))
 
             # Generate string
-            data_string         = " **cell\n   {}\n **data\n   ascii\n{}\n".format(num_grains, " ".join(id_list))
             length_string       = "{} {} ".format(self.volume_length, self.volume_length)
             resolution_string   = "{} {} ".format(RESOLUTION, RESOLUTION)
-            pre_data_string     = "***tesr\n **format\n   2.1\n **general\n   2\n   {}\n   {}\n".format(length_string, resolution_string)
-            post_data_string    = "***end"
+            data_string         = "***tesr\n **format\n   2.1\n **general\n   2\n   {}\n   {}\n ".format(length_string, resolution_string)
+            data_string        += "**cell\n   {}\n **data\n   ascii\n{}\n***end".format(num_grains, id_str)
 
             # Write to file
-            with open(OUTPUT_TESR + "_" + str(i + 1) + ".tesr", "w+") as file:
-                file.write(pre_data_string)
+            with open(self.output_tesr + "_" + str(i + 1) + ".tesr", "w+") as file:
                 file.write(data_string)
-                file.write(post_data_string)
     
     # Visualises the slices
     def visualise_slices(self):
         for i in range(len(self.slice_list)):
-            file_name = OUTPUT_TESR + "_" + str(i + 1)
-            options = "-cameraangle 14.5 -imagesize 800:800"
-            run("neper -V {}.tesr {} -print {}_{}".format(file_name, options, file_name, i + 1))
+            suffix = "_" + str(i + 1)
+            options = "-datacellcol id -cameraangle 14.5 -imagesize 800:800"
+            run("neper -V {}.tesr {} -print {}".format(self.output_tesr + suffix, options, self.output_img + suffix))
+
+    # Orders the voxels in grains
+    def order_voxels_in_grains(self):
+        grain_list_list = []
+        
+        # Iterate through each slice
+        for slice in self.slice_list:
+            num_grains = len(set([voxel["grain_id"] for voxel in slice]))
+            grain_list = [[] for _ in range(num_grains)]
+            for voxel in slice:
+                grain_list[voxel["grain_id"] - 1].append(voxel)
+            grain_list_list.append(grain_list)
+
+        # Release old slice list from memory
+        del self.slice_list
+        self.slice_list = grain_list_list
+
+    # Checks whether a grain is on a boundary
+    def check_on_boundary(self, grain):
+        for voxel in grain:
+            if voxel["y"] in [0, self.volume_length - RESOLUTION] or voxel["z"] in [0, self.volume_length - RESOLUTION]:
+                return True
+        return False
+
+    # Removes boundary grains
+    def remove_boundary_grains(self):
+        new_slice_list = [[grain for grain in slice if not self.check_on_boundary(grain)] for slice in self.slice_list]
+        del self.slice_list
+        self.slice_list = new_slice_list
+
+    # Exports the equivalent radius of each grain
+    def export_equivalent_radii(self):
+
+        # Get radii
+        statistics_list, all_eq_radius_list = [], []
+        for slice in self.slice_list:
+            eq_radius_list = [math.sqrt(len(grain) / math.pi) for grain in slice]
+            statistics_list.append(lognormal.fit_lognormal(eq_radius_list))
+            all_eq_radius_list += eq_radius_list
+        statistics_list = [lognormal.fit_lognormal(all_eq_radius_list)] + statistics_list # prepend
+
+        # Export to CSV
+        headers, statistics = dict_list_to_csv(statistics_list)
+        write_to_csv(self.output_csv + "_eq_radius.csv", headers, statistics)
 
 # Searches for a keyword in a text file and extracts the contained data
 def extract_data(keyword, filename):
@@ -121,24 +194,6 @@ def extract_data(keyword, filename):
     data = data.split(" ")
     data = [d for d in data if d != ""]
     return data
-
-# Converts a list of dictionaries to a CSV format
-def dict_to_csv(dictionary_list):
-    headers = list(dictionary_list[0].keys())
-    data = [[d[1] for d in dictionary.items()] for dictionary in dictionary_list]
-    return headers, data
-
-# Writes to CSV
-def write_to_csv(headers, data, path):
-    with open(path, "w+") as file:
-        writer = csv.writer(file)
-        writer.writerow(headers)
-        for row in data:
-            writer.writerow(row)
-
-# Runs a command using a single thread
-def run(command):
-    subprocess.run(["OMP_NUM_THREADS=1 " + command], shell = True, check = True)
 
 # Main function caller
 if __name__ == "__main__":

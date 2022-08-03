@@ -7,8 +7,8 @@
 """
 
 # Libraries
+from packages.helper import *
 import packages.orientation.angle as angle
-import packages.orientation.matrix as matrix
 import packages.orientation.orienter as orienter
 
 # Constants
@@ -55,7 +55,7 @@ def get_csl_euler_angles(csl_sigma, euler_1 = []):
     # Determine second set of euler angles
     matrix_1 = orienter.euler_to_matrix(euler_1)
     matrix_offset = orienter.euler_to_matrix(euler_offset)
-    matrix_2 = matrix.get_matrix_product(matrix_offset, matrix_1)
+    matrix_2 = get_matrix_product(matrix_offset, matrix_1)
     euler_2 = orienter.matrix_to_euler(matrix_2)
 
     # Return

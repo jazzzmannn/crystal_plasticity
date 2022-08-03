@@ -31,7 +31,7 @@ class Progressor:
         })
 
     # Runs all the queued up functions
-    def run(self, message = ""):
+    def commence(self, message = ""):
 
         # Determine formatting
         max_index_padding_length = len(str(len(self.function_list))) + 1
@@ -60,9 +60,9 @@ class Progressor:
             self.update(printer.get_text(" ({})\n".format(time_string), ["l_cyan"]))
 
         # Finish running everything
-        message = "({})".format(message) if message != "" else ""
+        message = " ({})".format(message) if message != "" else ""
         time_diff = round(time.time() - self.start_time, 2)
-        printer.print("{}Finished in {} seconds ({})\n".format(self.header_padding, time_diff, message), ["bold", "orange"])
+        printer.print("{}Finished in {} seconds{}\n".format(self.header_padding, time_diff, message), ["bold", "orange"])
     
     # Prints and stores message
     def update(self, message):
